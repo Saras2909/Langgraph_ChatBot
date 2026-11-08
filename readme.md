@@ -1,20 +1,28 @@
-
 # 🤖 LangGraph Chatbot
 
 A conversational AI chatbot built using **LangGraph**, **Streamlit**, and a locally running **Ollama LLM**.
 
-The application supports multiple conversations, persistent chat threads using SQLite checkpointing, and streaming AI responses.
+The chatbot supports **multiple conversations**, **persistent chat memory using SQLite**, **AI streaming**, and **tool calling**. It can search the web, perform mathematical calculations, retrieve information from Wikipedia, and read the content of webpages.
+
+---
 
 ## ✨ Features
 
 - 💬 Interactive chatbot interface
 - 🧠 Conversation memory using LangGraph
 - 🗂️ Multiple chat threads
-- 💾 Persistent conversation state using SQLite
+- 💾 Persistent conversation state using SQLite checkpointing
 - 🌊 Streaming AI responses
 - 🖥️ Streamlit-based user interface
 - 🦙 Local LLM support using Ollama
 - 🔄 Previous conversations can be loaded from the sidebar
+- 🌐 Web search using DuckDuckGo
+- 📖 Wikipedia search and summaries
+- 🔗 Webpage content extraction
+- 🧮 Mathematical calculations using a calculator tool
+- 🔧 LangGraph tool calling and conditional routing
+
+---
 
 ## 🛠️ Tech Stack
 
@@ -24,6 +32,13 @@ The application supports multiple conversations, persistent chat threads using S
 - **LangChain**
 - **Ollama**
 - **SQLite**
+- **DuckDuckGo Search (`ddgs`)**
+- **Wikipedia**
+- **Requests**
+- **BeautifulSoup**
+- **python-dotenv**
+
+---
 
 ## 📁 Project Structure
 
@@ -44,19 +59,32 @@ ChatBot/
 └── chatbot.ipynb
 ```
 
-## ⚙️ Installation
+---
 
-### 1. Clone the repository
+# ⚙️ Installation
 
-Clone this repository and navigate to the project directory.
+## 1. Clone the Repository
 
-### 2. Create a virtual environment
+Clone the repository and navigate to the project directory:
 
 ```bash
-python3 -m venv .venv
+git clone <your-repository-url>
+cd ChatBot
 ```
 
-### 3. Activate the virtual environment
+---
+
+## 2. Create a Virtual Environment
+
+Using `uv`:
+
+```bash
+uv venv
+```
+
+---
+
+## 3. Activate the Virtual Environment
 
 On Linux/macOS:
 
@@ -64,13 +92,25 @@ On Linux/macOS:
 source .venv/bin/activate
 ```
 
-### 4. Install dependencies
+---
+
+## 4. Install Dependencies
+
+Using `uv`:
 
 ```bash
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 
-## 🦙 Install Ollama
+If you do not have a `requirements.txt` file yet, you can generate one using:
+
+```bash
+uv pip freeze > requirements.txt
+```
+
+---
+
+# 🦙 Install Ollama
 
 Make sure Ollama is installed and running on your system.
 
@@ -80,17 +120,29 @@ Pull the model used in this project:
 ollama pull llama3.2:3b
 ```
 
-## ▶️ Run the Application
+You can verify that Ollama is running with:
+
+```bash
+ollama list
+```
+
+---
+
+# ▶️ Run the Application
 
 From the project root:
 
 ```bash
-python -m streamlit run Frontend/app.py
+streamlit run Frontend/app.py
 ```
 
 Then open the local URL displayed by Streamlit in your browser.
 
-## 🧠 How It Works
+---
+
+# 🧠 How It Works
+
+The application follows this flow:
 
 ```text
 User
@@ -99,16 +151,95 @@ Streamlit Frontend
   ↓
 LangGraph
   ↓
-ChatOllama
+Chat Node
   ↓
-llama3.2:3b
+Ollama LLM
   ↓
-AI Response
+Tool Required?
+  ↓
+Yes ───────────────→ Tool Node
+  ↓                       ↓
+No                      Tool Result
+  ↓                       ↓
+AI Response ←─────────────
+  ↓
+Streamlit UI
 ```
 
-Each conversation is assigned a unique `thread_id`.
+The LangGraph workflow determines whether the AI needs to use a tool.
 
-LangGraph uses SQLite checkpointing to maintain the conversation state for each thread.
+If a tool is required, the request is routed to the appropriate tool. After receiving the tool result, the conversation returns to the AI model to generate the final response.
+
+---
+
+# 🔧 Available Tools
+
+## 🌐 Web Search
+
+The chatbot can search the web for current information using DuckDuckGo.
+
+The search tool returns:
+
+- Title
+- URL
+- Search snippet
+
+---
+
+## 🧮 Calculator
+
+The chatbot can perform mathematical calculations.
+
+Supported operations include:
+
+- Addition, subtraction, multiplication, and division
+- Parentheses
+- Powers using `**`
+- Modulo using `%`
+- `sqrt()`
+- `abs()`
+- `round()`
+- `sum()`
+- `range()`
+- Mathematical constants such as `pi` and `e`
+
+Example:
+
+```text
+sum(range(1, 101))
+```
+
+---
+
+## 📖 Wikipedia Search
+
+The chatbot can search Wikipedia for:
+
+- Definitions
+- Historical information
+- Famous personalities
+- General concepts
+
+The tool returns a short summary of the requested topic.
+
+---
+
+## 🔗 Webpage Content Extraction
+
+When provided with a webpage URL, the chatbot can fetch and extract the text content from the page.
+
+The tool:
+
+1. Fetches the webpage
+2. Removes unnecessary elements such as scripts and styles
+3. Extracts readable text
+4. Limits the output to prevent excessive LLM context usage
+
+---
+
+# 💾 Conversation Memory
+
+Each conversation is assigned a unique `thread_id`.
 
 ```text
 Conversation
@@ -117,32 +248,119 @@ thread_id
       ↓
 LangGraph Checkpointer
       ↓
-SQLite
+SQLite Database
 ```
 
-## 🚀 Future Improvements
+The application uses LangGraph's `SqliteSaver` to persist conversation checkpoints.
 
-- Automatic chat title generation
-- User authentication
-- Conversation title persistence
-- FastAPI backend
-- React frontend
-- PostgreSQL database
-- Cloud LLM support
-- Docker deployment
+This allows previous conversations to be retrieved and loaded later.
 
-## 📚 Learning Purpose
+---
 
-This project was built to learn how to work with:
+# 🗂️ Multiple Chat Threads
+
+Users can create multiple conversations using the sidebar.
+
+```text
+Sidebar
+│
+├── ➕ New Chat
+│
+└── My Conversations
+    ├── Chat - 1
+    ├── Chat - 2
+    ├── Chat - 3
+    └── ...
+```
+
+Each chat has its own unique `thread_id`.
+
+The chatbot retrieves existing conversation threads from the SQLite checkpoint database when the application starts.
+
+---
+
+# 🌊 Streaming Responses
+
+AI responses are streamed directly to the Streamlit interface.
+
+Instead of waiting for the complete response, text is displayed progressively as it is generated.
+
+```text
+LLM
+ ↓
+AI Message Chunks
+ ↓
+LangGraph Stream
+ ↓
+Streamlit write_stream()
+ ↓
+User Interface
+```
+
+---
+
+# 🔧 Tool Execution
+
+When the AI decides that a tool is required, LangGraph routes the request through a `ToolNode`.
+
+```text
+Chat Node
+    ↓
+tools_condition
+    ↓
+┌───────────────┐
+│ Tool Required │
+└───────────────┘
+    ↓       ↓
+   Yes      No
+    ↓        ↓
+Tool Node   END
+    ↓
+Chat Node
+```
+
+The Streamlit interface displays tool execution status while the chatbot processes the request.
+
+---
+
+# 📚 Learning Purpose
+
+This project was built to learn and practice:
 
 - LangGraph state management
+- Building graph-based AI workflows
+- LangGraph conditional edges
+- Tool calling with LangChain
+- `ToolNode` and `tools_condition`
 - Conversation threads
 - Persistent memory
 - SQLite checkpointing
 - Local LLMs using Ollama
-- Streaming responses
+- Streaming AI responses
 - Streamlit session state
+- Web search integration
+- Wikipedia integration
+- Webpage content extraction
 
 ---
 
-Built as part of my journey into **Agentic AI and LLM application development**.
+# 🚀 Future Improvements
+
+
+---
+
+## 📌 Notes
+
+- The project currently uses the local Ollama model:
+
+```text
+llama3.2:3b
+```
+
+- Ollama must be running before starting the Streamlit application.
+- Conversation data is stored locally using SQLite.
+- Chat threads are identified using unique UUID-based `thread_id` values.
+
+---
+
+Built as part of my journey into **Agentic AI and LLM Application Development**. 🤖🚀
